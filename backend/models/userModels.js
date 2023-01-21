@@ -14,10 +14,6 @@ const userInfoSchema = mongoose.Schema({
         type: Number,
         required: true
     },
-    desiredDestination:{
-        type: String,
-        required:true
-    },
     isGuide:{
         type: Boolean,
         required:true

@@ -14,6 +14,10 @@ const userInfoSchema = mongoose.Schema({
         type: Number,
         required:true
     },
+    desiredDestination:{
+        type: String,
+        required:true
+    },
     __link:{
         collectionName:{
             type: String,
