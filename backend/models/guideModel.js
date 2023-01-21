@@ -1,32 +1,17 @@
 const mongoose = require("mongoose");
 
-
 const userInfoSchema = mongoose.Schema({
-    gender:{
-        type: String,
-        required:true
-    },
-    averageRatings:{
+    averageRating: {
         type: Number,
-        required:true
+        required: false
     },
-    totalService:{
+    totalServices: {
         type: Number,
-        required:true
+        required: true
     },
-    desiredDestination:{
+    location: {
         type: String,
-        required:true
-    },
-    __link:{
-        collectionName:{
-            type: String,
-            required: true
-        },
-        id:{
-            type:mongoose.Types.ObjectId,
-            required: true
-        }
+        required: true
     }
 });
 

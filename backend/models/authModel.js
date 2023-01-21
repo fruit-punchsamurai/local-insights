@@ -29,6 +29,17 @@ const userSchema = mongoose.Schema({
             },
             message: ()=> 'Salt must be at least five characters long'
         }
+    },
+    __link: {
+        collectionName: {
+            type: String,
+            default: "userInfo",
+            required: true
+        },
+        id: {
+            type: mongoose.Types.ObjectId,
+            required: true
+        }
     }
 })
 

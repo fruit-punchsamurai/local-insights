@@ -3,32 +3,38 @@ const sha256 = require('sha256');
 const crypto = require('crypto');
 const authRouter = express.Router();
 const UserModel = require('../models/authModel');
-const UserInfo = require('../models/userModels')
+const UserInfo = require('../models/userInfoModel')
+const GuideInfo = require('../models/guideModel')
 
-
-authRouter.post('/create', async (req, res, next) =>{
+authRouter.post('/create', async (req, res, next) => {
     const user = req.body
-    try{
-        let {email, hash} = user;
-        let exists = await UserModel.findOne({email});
-        if (exists) throw {errors: "{\"email\":{\"name\":\"ValidatorError\",\"message\":\"Email already exists\",\"properties\":{\"message\":\"Email already exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"duplicate\",\"path\":\"email\"}"};
-        if (!hash) throw {errors: "No password"}
+    try {
+        
+        let { email, hash } = user;
+        let exists = await UserModel.findOne({ email });
+        if (exists) throw { errors: "{\"email\":{\"name\":\"ValidatorError\",\"message\":\"Email already exists\",\"properties\":{\"message\":\"Email already exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"duplicate\",\"path\":\"email\"}" };
+        if (!hash) throw { errors: "No password" }
+
+        //set guideInfo
+        let { ...uInfo } = user.userInfo;
+        let newGuide = {};
+        if (uInfo.isGuide == 'true') {
+            let gInfo = user.guideInfo;
+            gInfo.averageRating = null;
+            gInfo.totalServices = 0;
+            newGuide = await GuideInfo.create(gInfo)
+        }
+        //set userInfo
+        uInfo.__link = { collectionName: "guideInfo", id: newGuide.id };
+        const newUser = await UserInfo.create(uInfo)
+
         let salt = crypto.randomBytes(16).toString('hex');
         let newPass = hash + salt;
         let newHash = sha256(newPass);
-        const {id} = await UserModel.create({email, hash: newHash, salt});
-        let {...uInfo}= user.userInfo
-        let {...gInfo}=user.guideInfo
-        console.log(uInfo)
-        console.log(gInfo)
-        uInfo.__link ={collectionName:"Auth",id}
-        const newUser = await UserInfo.create(uInfo)
-        if (user.isGuide==true){
-        const newGuide = await GuideInfo.create(gInfo)
-    }
-        if(!newUser) await UserModel.deleteOne({id})
-        res.send({id,email});
-    }catch(err){
+        const newAuthInfo = await UserModel.create({ email, hash: newHash, salt, __link: { collectionName: "userInfo", id: newUser.id } });
+        
+        res.send({ id: newAuthInfo.id, email });
+    } catch (err) {
         console.log(err);
         res.status(400).json({
             errors: `${JSON.stringify(err.errors)}`
@@ -36,19 +42,19 @@ authRouter.post('/create', async (req, res, next) =>{
     }
 });
 
-authRouter.post('/login', async (req, res, next) =>{
-    const {email, hash} = req.body
-    try{
-        let exists = await UserModel.findOne({email});
-        if (!exists) throw {errors: "{\"email\":{\"name\":\"AccountError\",\"message\":\"Email doesn't exists\",\"properties\":{\"message\":\"Email doesn't exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"404\",\"path\":\"email\"}"}
-        let newPass = hash + exists.salt;
+authRouter.post('/login', async (req, res, next) => {
+    const user = req.body
+    try {
+        let {hash, salt, ...exists} = await UserModel.findOne({ email });
+        if (!exists) throw { errors: "{\"email\":{\"name\":\"AccountError\",\"message\":\"Email doesn't exists\",\"properties\":{\"message\":\"Email doesn't exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"404\",\"path\":\"email\"}" }
+        let newPass = user.hash + salt;
         let newHash = sha256(newPass);
-        if(newHash == exists.hash){
-            res.status(200).json({email: exists.email, login: 'success', token: 'randomgibberish'});
-        }else{
-            throw {errors: "{\"hash\":{\"name\":\"ValidatorError\",\"message\":\"Password doesn't match\",\"properties\":{\"message\":\"Password doesn't match\",\"type\":\"required\",\"path\":\"hash\"},\"kind\":\"400\",\"path\":\"hash\"}"}
+        if (newHash == hash) {
+            res.status(200).json(exists);
+        } else {
+            throw { errors: "{\"hash\":{\"name\":\"ValidatorError\",\"message\":\"Password doesn't match\",\"properties\":{\"message\":\"Password doesn't match\",\"type\":\"required\",\"path\":\"hash\"},\"kind\":\"400\",\"path\":\"hash\"}" }
         }
-    }catch(err){
+    } catch (err) {
         console.log(err);
         res.status(400).json({
             errors: `${JSON.stringify(err.errors)}`
@@ -56,26 +62,25 @@ authRouter.post('/login', async (req, res, next) =>{
     }
 });
 
-authRouter.patch('/reset', async (req, res, next) =>{
-    const {email, hash} = req.body
-    try{
-        let exists = await UserModel.findOne({email});
-        if (!exists) throw {errors: "{\"email\":{\"name\":\"AccountError\",\"message\":\"Email doesn't exists\",\"properties\":{\"message\":\"Email doesn't exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"404\",\"path\":\"email\"}"}
-        if(sha256((req.body.old+exists.salt))!=exists.hash) throw {errors: "{\"old\":{\"name\":\"ValidatorError\",\"message\":\"Password doesn't match\",\"properties\":{\"message\":\"Password doesn't match\",\"type\":\"required\",\"path\":\"old\"},\"kind\":\"400\",\"path\":\"old\"}"}
+authRouter.patch('/reset', async (req, res, next) => {
+    const { email, hash } = req.body
+    try {
+        let exists = await UserModel.findOne({ email });
+        if (!exists) throw { errors: "{\"email\":{\"name\":\"AccountError\",\"message\":\"Email doesn't exists\",\"properties\":{\"message\":\"Email doesn't exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"404\",\"path\":\"email\"}" }
+        if (sha256((req.body.old + exists.salt)) != exists.hash) throw { errors: "{\"old\":{\"name\":\"ValidatorError\",\"message\":\"Password doesn't match\",\"properties\":{\"message\":\"Password doesn't match\",\"type\":\"required\",\"path\":\"old\"},\"kind\":\"400\",\"path\":\"old\"}" }
         let salt = crypto.randomBytes(16).toString('hex')
-        let newPass= hash +salt
-        let newHash= sha256(newPass)
-        let newData = await UserModel.updateOne(exists,{hash:newHash,salt})
+        let newPass = hash + salt
+        let newHash = sha256(newPass)
+        let newData = await UserModel.updateOne(exists, { hash: newHash, salt })
         console.log(newData)
-        res.status(200).json({id:exists.id,email:exists.email,success:true});
+        res.status(200).json({ id: exists.id, email: exists.email, success: true });
     }
-    catch(err){
+    catch (err) {
         console.log(err);
         res.status(400).json({
             errors: `${JSON.stringify(err.errors)}`
         });
-        }
+    }
 });
-
 
 module.exports = authRouter;
