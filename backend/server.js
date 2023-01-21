@@ -1,6 +1,9 @@
 //importing libaries
 const express = require("express");
 const mongoose = require("mongoose");
+const app = express();
+// const http = require('http').Server(app);
+// const io = require('socket.io')(http);
 
 //importing routes
 const authRouter = require("./routes/auth");
@@ -8,8 +11,6 @@ const authRouter = require("./routes/auth");
 //importing config
 const { MONGODB_URI, port } = require("./config.js");
 
-const app = express();
-//MONGODB_URI = 0;
 mongoose.set("strictQuery", true);
 
 app.use(express.json());
