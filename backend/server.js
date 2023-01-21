@@ -3,10 +3,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 
 //importing routes
-const authRouter = require("./routes/authRouter");
+const authRouter = require("./routes/auth");
 
 //importing config
-const { MONGODB_URI, port } = require("./config");
+const { MONGODB_URI, port } = require("./config.js");
 
 const app = express();
 //MONGODB_URI = 0;

@@ -2,7 +2,7 @@ const express = require('express');
 const sha256 = require('sha256');
 const crypto = require('crypto');
 const authRouter = express.Router();
-const UserModel = require('../models/User');
+const UserModel = require('../models/authModel');
 
 authRouter.post('/create', async (req, res, next) =>{
     const user = req.body
