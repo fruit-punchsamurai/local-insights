@@ -3,6 +3,8 @@ const sha256 = require('sha256');
 const crypto = require('crypto');
 const authRouter = express.Router();
 const UserModel = require('../models/authModel');
+const UserInfo = require('../models/userModels')
+
 
 authRouter.post('/create', async (req, res, next) =>{
     const user = req.body
@@ -16,9 +18,14 @@ authRouter.post('/create', async (req, res, next) =>{
         let newHash = sha256(newPass);
         const {id} = await UserModel.create({email, hash: newHash, salt});
         let {...uInfo}= user.userInfo
+        let {...gInfo}=user.guideInfo
         console.log(uInfo)
+        console.log(gInfo)
         uInfo.__link ={collectionName:"Auth",id}
         const newUser = await UserInfo.create(uInfo)
+        if (user.isGuide==true){
+        const newGuide = await GuideInfo.create(gInfo)
+    }
         if(!newUser) await UserModel.deleteOne({id})
         res.send({id,email});
     }catch(err){
