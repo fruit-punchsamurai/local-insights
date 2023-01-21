@@ -2,8 +2,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
-// const http = require('http').Server(app);
-// const io = require('socket.io')(http);
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
 
 //importing routes
 const authRouter = require("./routes/auth");
@@ -23,7 +23,17 @@ app.get("/", async (req, res) => {
   res.send("LOCAL INSIGHTS");
 });
 
-app.listen(port, () =>
+// io.on('connection', (socket) => {
+//   socket.on('request guides', msg => {
+//     io.emit('chat message', msg);
+//   });
+//   socket.on('create', (room)=>{
+//     socket.join(room);
+//   });
+
+// });
+
+http.listen(port, () =>
   console.log(`App listening at http://localhost:${port}`)
 );
 
