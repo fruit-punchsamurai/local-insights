@@ -3,8 +3,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 const http = require('http').Server(app);
-const io = require('socket.io')(http,{
-  cors:{
+const io = require('socket.io')(http, {
+  cors: {
     origin: "http://127.0.0.1:5500"
   }
 });
@@ -41,23 +41,26 @@ io.on('connection', socket => {
   // console.log(`A user connected: ${socket.id}`);
 
   socket.on('role', data => {
-    if(data.type === 'tourist') {
+    if (data.type === 'tourist') {
       //append tourist to tourist set
-      tourists.add(socket);
+      tourists.add({socket, data});
       console.log(`Tourist connected: ${socket.id}`);
 
       // handle tourist connections
       //data is the object of template {}
-      socket.on('request', data => {
+      socket.on('request', message => {
         console.log(`Received request from tourist ${socket.id}: ${JSON.stringify(data)}`);
         // send request to all guides catch and display on client side
-        guides.forEach(guideSocket => {
-          guideSocket.emit('request', {data, touristInfo: socket.id});
+        guides.forEach(guideSocket => { 
+          console.log(guideSocket.data.location);
+          console.log(data.location)
+          if (guideSocket.data.location === data.location)
+            guideSocket.socket.emit('request', data);
         });
       });
-    } else if (role.type === 'guide') {
+    } else if (data.type === 'guide') {
       // handle guide connections
-      guides.add(socket);
+      guides.add({socket, data});
       console.log(`Guide connected: ${socket.id}`);
 
       socket.on('accept', data => {
