@@ -7,6 +7,7 @@ const io = require('socket.io')(http);
 
 //importing routes
 const authRouter = require("./routes/auth");
+const searchRouter = require("./routes/search")
 
 //importing config
 const { MONGODB_URI, port } = require("./config.js");
@@ -22,6 +23,8 @@ app.use("/auth", authRouter);
 app.get("/", async (req, res) => {
   res.send("LOCAL INSIGHTS");
 });
+app.use("/search", searchRouter);
+
 
 // io.on('connection', (socket) => {
 //   socket.on('request guides', msg => {
