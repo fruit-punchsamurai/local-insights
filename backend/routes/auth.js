@@ -1,15 +1,15 @@
 const express = require('express');
 const sha256 = require('sha256');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const authRouter = express.Router();
 const UserModel = require('../models/authModel');
 const UserInfo = require('../models/userInfoModel')
 const GuideInfo = require('../models/guideModel')
-
+const {secretkey} = require('../config')
 authRouter.post('/create', async (req, res, next) => {
     const user = req.body
     try {
-        
         let { email, hash } = user;
         let exists = await UserModel.findOne({ email });
         if (exists) throw { errors: "{\"email\":{\"name\":\"ValidatorError\",\"message\":\"Email already exists\",\"properties\":{\"message\":\"Email already exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"duplicate\",\"path\":\"email\"}" };
@@ -43,13 +43,32 @@ authRouter.post('/create', async (req, res, next) => {
 });
 
 authRouter.post('/login', async (req, res, next) => {
-    const user = req.body
+    let token = req.headers['x-auth-token'];
+    let user;
+    let donotgenerate = false;
+    if(!token){
+        user= req.body
+    } else{
+        donotgenerate = true;
+        //decrypt token and set user to decrypted value
+        //handle thrown error
+        try{
+            user = jwt.verify(token, secretkey );
+        }catch(err){
+            return res.status(400).json({errors: `${err}`})
+        }
+    }
+
     try {
-        let {hash, salt, ...exists} = await UserModel.findOne({ email });
+        let {hash, salt, ...existential} = await UserModel.findOne({ email:user.email });
+        let exists = {email: existential._doc.email, _id: existential._doc._id}
         if (!exists) throw { errors: "{\"email\":{\"name\":\"AccountError\",\"message\":\"Email doesn't exists\",\"properties\":{\"message\":\"Email doesn't exists\",\"type\":\"required\",\"path\":\"email\"},\"kind\":\"404\",\"path\":\"email\"}" }
         let newPass = user.hash + salt;
         let newHash = sha256(newPass);
         if (newHash == hash) {
+            if(!donotgenerate)
+                token = jwt.sign({email:user.email,hash:user.hash}, secretkey,  { expiresIn: "5s" });
+            exists.token = token;
             res.status(200).json(exists);
         } else {
             throw { errors: "{\"hash\":{\"name\":\"ValidatorError\",\"message\":\"Password doesn't match\",\"properties\":{\"message\":\"Password doesn't match\",\"type\":\"required\",\"path\":\"hash\"},\"kind\":\"400\",\"path\":\"hash\"}" }
